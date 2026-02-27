@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Cyberpunk-styled Canadian weather dashboard with live radar, EC alerts, and forecasts">
+  <meta name="theme-color" content="#090b13">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WX HUD">
+  <title>CANADIAN WX HUD</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Scanline overlay -->
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <!-- Header -->
+  <header class="hud-header">
+    <div class="header-left">
+      <h1 class="site-title" data-text="CANADIAN WX HUD">CANADIAN WX HUD</h1>
+      <span class="location-tag" id="location-tag">SELECT A LOCATION</span>
+    </div>
+    <div class="header-center">
+      <div class="search-wrap" id="search-wrap">
+        <input type="text" class="search-input" id="search-input"
+               placeholder="SEARCH CITY..." autocomplete="off" spellcheck="false">
+        <button class="geo-btn" id="geo-btn" title="Use my location" onclick="requestGeolocation()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>
+          </svg>
+        </button>
+        <div class="search-results" id="search-results"></div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-meta">
+        <div class="clock-display" id="clock">00:00:00</div>
+        <div class="last-updated" id="last-updated">UPDATED: --:--:--</div>
+      </div>
+      <button class="refresh-btn" id="refresh-btn" onclick="refreshAll()">
+        <span class="refresh-icon">⟳</span> REFRESH
+      </button>
+    </div>
+  </header>
+
+  <!-- Main dashboard grid -->
+  <main class="dashboard-grid" id="dashboard">
+
+    <!-- Panel 1: Current Conditions -->
+    <section class="panel panel-current" id="panel-current">
+      <div class="panel-corners">
+        <span class="corner corner-tl"></span>
+        <span class="corner corner-tr"></span>
+        <span class="corner corner-bl"></span>
+        <span class="corner corner-br"></span>
+      </div>
+      <div class="panel-header">
+        <h2 class="panel-title">CURRENT CONDITIONS</h2>
+        <div class="status-dot" id="status-current"></div>
+      </div>
+      <div class="panel-body" id="body-current"></div>
+      <div class="loading-overlay" id="loading-current">
+        <span class="loading-text">ACQUIRING SIGNAL...</span>
+      </div>
+    </section>
+
+    <!-- Panel 6: EC Alerts -->
+    <section class="panel panel-alerts" id="panel-alerts">
+      <div class="panel-corners">
+        <span class="corner corner-tl"></span>
+        <span class="corner corner-tr"></span>
+        <span class="corner corner-bl"></span>
+        <span class="corner corner-br"></span>
+      </div>
+      <div class="panel-header">
+        <h2 class="panel-title">EC ALERTS</h2>
+        <div class="status-dot" id="status-alerts"></div>
+      </div>
+      <div class="panel-body" id="body-alerts"></div>
+      <div class="loading-overlay" id="loading-alerts">
+        <span class="loading-text">ACQUIRING SIGNAL...</span>
+      </div>
+    </section>
+
+    <!-- Panel 8: Astronomy -->
+    <section class="panel panel-astronomy" id="panel-astronomy">
+      <div class="panel-corners">
+        <span class="corner corner-tl"></span>
+        <span class="corner corner-tr"></span>
+        <span class="corner corner-bl"></span>
+        <span class="corner corner-br"></span>
+      </div>
+      <div class="panel-header">
+        <h2 class="panel-title">ASTRONOMY</h2>
+        <div class="status-dot" id="status-astronomy"></div>
+      </div>
+      <div class="panel-body" id="body-astronomy"></div>
+      <div class="loading-overlay" id="loading-astronomy">
+        <span class="loading-text">ACQUIRING SIGNAL...</span>
+      </div>
+    </section>
+
+    <!-- Panel 7: Air Quality -->
+    <section class="panel panel-aqi" id="panel-aqi">
+      <div class="panel-corners">
+        <span class="corner corner-tl"></span>
+        <span class="corner corner-tr"></span>
+        <span class="corner corner-bl"></span>
+        <span class="corner corner-br"></span>
+      </div>
+      <div class="panel-header">
+        <h2 class="panel-title">AIR QUALITY</h2>
+        <div class="status-dot" id="status-aqi"></div>
+      </div>
+      <div class="panel-body" id="body-aqi"></div>
+      <div class="loading-overlay" id="loading-aqi">
+        <span class="loading-text">ACQUIRING SIGNAL...</span>
+      </div>
+    </section>
+
+    <!-- Panel 2: Hourly Forecast -->
+    <section class="panel panel-hourly" id="panel-hourly">
+      <div class="panel-corners">
+        <span class="corner corner-tl"></span>
+        <span class="corner corner-tr"></span>
+        <span class="corner corner-bl"></span>
+        <span class="corner corner-br"></span>
+      </div>
+      <div class="panel-header">
+        <h2 class="panel-title">HOURLY FORECAST</h2>
+        <div class="status-dot" id="status-hourly"></div>
+      </div>
+      <div class="panel-body panel-body-hourly" id="body-hourly">
+        <canvas id="hourly-chart" height="110"></canvas>
+        <div class="hourly-cards" id="hourly-cards"></div>
+      </div>
+      <div class="loading-overlay" id="loading-hourly">
+        <span class="loading-text">ACQUIRING SIGNAL...</span>
+      </div>
+    </section>
+
+    <!-- Panel 3: 7-Day Forecast -->
+    <section class="panel panel-daily" id="panel-daily">
+      <div class="panel-corners">
+        <span class="corner corner-tl"></span>
+        <span class="corner corner-tr"></span>
+        <span class="corner corner-bl"></span>
+        <span class="corner corner-br"></span>
+      </div>
+      <div class="panel-header">
+        <h2 class="panel-title">7-DAY FORECAST</h2>
+        <div class="status-dot" id="status-daily"></div>
+      </div>
+      <div class="panel-body" id="body-daily"></div>
+      <div class="loading-overlay" id="loading-daily">
+        <span class="loading-text">ACQUIRING SIGNAL...</span>
+      </div>
+    </section>
+
+    <!-- Panel 4: Live Radar (Windy.com) -->
+    <section class="panel panel-radar" id="panel-radar">
+      <div class="panel-corners">
+        <span class="corner corner-tl"></span>
+        <span class="corner corner-tr"></span>
+        <span class="corner corner-bl"></span>
+        <span class="corner corner-br"></span>
+      </div>
+      <div class="panel-header">
+        <h2 class="panel-title">LIVE MAP</h2>
+        <div class="radar-controls">
+          <div class="model-tabs" id="radar-tabs">
+            <button class="tab-btn active" data-overlay="radar" onclick="switchRadarOverlay(this)">RADAR</button>
+            <button class="tab-btn" data-overlay="thunder" onclick="switchRadarOverlay(this)">⚡ LIGHTNING</button>
+            <button class="tab-btn" data-overlay="wind" onclick="switchRadarOverlay(this)">WIND</button>
+          </div>
+          <span class="live-badge">● LIVE</span>
+        </div>
+      </div>
+      <div class="panel-body panel-body-iframe" id="body-radar">
+        <iframe
+          id="windy-iframe"
+          src="about:blank"
+          frameborder="0"
+          allowfullscreen
+          allow="geolocation"
+          title="Windy.com Live Radar"
+        ></iframe>
+        <!-- Blocks scroll-to-zoom on the map while page scrolling; click to interact -->
+        <div class="map-scroll-guard" id="radar-guard" onclick="unlockRadar()"></div>
+        <div class="map-lock-badge" id="radar-badge">🔒 CLICK MAP TO INTERACT</div>
+      </div>
+    </section>
+
+    <!-- Panel 5: Weather Models (Tropical Tidbits) -->
+    <section class="panel panel-models" id="panel-models">
+      <div class="panel-corners">
+        <span class="corner corner-tl"></span>
+        <span class="corner corner-tr"></span>
+        <span class="corner corner-bl"></span>
+        <span class="corner corner-br"></span>
+      </div>
+      <div class="panel-header">
+        <h2 class="panel-title">WEATHER MODELS — GFS</h2>
+        <div class="model-tabs">
+          <button class="tab-btn active" data-pkg="mslp_pcpn" onclick="switchModelTab(this)">PRECIP</button>
+          <button class="tab-btn" data-pkg="temp_2m" onclick="switchModelTab(this)">TEMP</button>
+          <button class="tab-btn" data-pkg="snow_dpth" onclick="switchModelTab(this)">SNOW</button>
+        </div>
+      </div>
+      <div class="panel-body panel-body-iframe" id="body-models">
+        <div class="iframe-fallback" id="models-fallback">
+          <div class="fallback-icon">🗺️</div>
+          <p class="fallback-text">TROPICAL TIDBITS — GFS MODELS</p>
+          <a class="fallback-link" id="models-fallback-link"
+            href="https://www.tropicaltidbits.com/analysis/models/?model=gfs&region=ne&pkg=mslp_pcpn"
+            target="_blank" rel="noopener noreferrer">
+            OPEN FULL VIEWER ↗
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Credits Footer -->
+  <footer class="hud-footer">
+    <div class="footer-left">
+      <span class="footer-version">CANADIAN WX HUD <span class="footer-vbadge">v2.0.0</span></span>
+    </div>
+    <div class="footer-credits">
+      <span class="footer-label">DATA</span>
+      <a class="footer-link" href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
+      <span class="footer-sep">·</span>
+      <a class="footer-link" href="https://weather.gc.ca" target="_blank" rel="noopener">Environment Canada</a>
+      <span class="footer-sep">·</span>
+      <a class="footer-link" href="https://windy.com" target="_blank" rel="noopener">Windy.com</a>
+      <span class="footer-sep">·</span>
+      <a class="footer-link" href="https://www.blitzortung.org" target="_blank" rel="noopener">Blitzortung</a>
+      <span class="footer-sep">·</span>
+      <a class="footer-link" href="https://www.tropicaltidbits.com" target="_blank" rel="noopener">Tropical Tidbits</a>
+    </div>
+    <div class="footer-right">
+      <span class="footer-label">BUILT WITH</span>
+      <a class="footer-link footer-claude" href="https://claude.ai/claude-code" target="_blank" rel="noopener">Claude Code</a>
+      <span class="footer-dim">by Anthropic</span>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').then(
+        (reg) => console.log('SW registered:', reg.scope),
+        (err) => console.warn('SW registration failed:', err)
+      );
+    }
+  </script>
+</body>
+</html>
