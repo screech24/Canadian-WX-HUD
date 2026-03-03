@@ -1,7 +1,40 @@
 # Changelog
 
-All notable changes to ORILLIA WX HUD are documented here.
+All notable changes to CANADIAN WX HUD are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [2.2.0] — 2026-03-03
+
+### Added
+- Aurora forecast image (NOAA SWPC) in Astronomy panel below moon section
+- Solar SUVI 171 image (NOAA SWPC) in Astronomy panel
+- New GOES-19 Satellite panel with three tabs: GL GeoColor (default), GL IR (Band 13), Full Disk GeoColor
+- Satellite images refresh on manual REFRESH and cache-bust on tab switch
+- NOAA SWPC and NOAA NESDIS/GOES-19 added to data sources in README
+
+### Changed
+- Dashboard grid updated from 8 to 9 panels
+- Version bumped to v2.2.0
+
+---
+
+## [2.1.0] — 2026-02-27
+
+### Fixed
+- EC alert colours now use `risk_colour_en` from WFS for correct EC colour mapping (red → Extreme, orange → Severe, yellow → Moderate) with `alert_type` keyword fallback
+- Deprecated `apple-mobile-web-app-capable` meta tag replaced with `mobile-web-app-capable`
+
+### Added
+- Alert location display using `feature_name_en` and `province` from WFS
+
+### Changed
+- Hourly forecast reduced from 48 to 24 hours with chart legend (cyan line = Temperature, blue bars = Precip Probability)
+- Tropical Tidbits TEMP button now links to 2m Temp Anomaly (`T2ma`) instead of plain 2m temp
+- "OPEN FULL VIEWER" → "OPEN LINK" on Tropical Tidbits panel
+- Version badge in footer now links to GitHub changelog
+- Version bumped to v2.1.0
 
 ---
 

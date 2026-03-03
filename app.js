@@ -692,6 +692,28 @@ function drawHourlyChart(canvas, hours) {
   for (let i = 0; i < hours.length; i += 6) {
     ctx.fillText(hours[i].label, xOf(i), H - 4);
   }
+
+  // Legend (top-right corner)
+  const legX = padL + plotW - 110;
+  const legY = padT + 2;
+  ctx.font = '8px "Share Tech Mono", monospace';
+  ctx.textAlign = 'left';
+
+  // Cyan line — Temperature
+  ctx.strokeStyle = '#00f0ff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(legX, legY + 4);
+  ctx.lineTo(legX + 14, legY + 4);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(180,220,240,0.6)';
+  ctx.fillText('TEMP', legX + 18, legY + 7);
+
+  // Blue bar — Precip Probability
+  ctx.fillStyle = 'rgba(0,150,255,0.35)';
+  ctx.fillRect(legX + 56, legY, 14, 8);
+  ctx.fillStyle = 'rgba(180,220,240,0.6)';
+  ctx.fillText('PRECIP %', legX + 74, legY + 7);
 }
 
 /* --- AQI Semicircle Gauge --- */
@@ -850,23 +872,46 @@ async function fetchAlerts() {
 
         seen.add(id);
 
-        const alertType = get('alert_type');
-        const alertName = get('alert_name_en');
-        const alertText = get('alert_text_en');
-        const pubDate   = get('publication_datetime');
+        const alertType   = get('alert_type');
+        const alertName   = get('alert_name_en');
+        const alertText   = get('alert_text_en');
+        const pubDate     = get('publication_datetime');
+        const riskColour  = (get('risk_colour_en') || '').toLowerCase();
+        const featureName = get('feature_name_en');
+        const province    = get('province');
 
+        // Use EC's risk_colour_en as the authoritative colour source
         let capSeverity = '';
-        if (alertType === 'warning')        capSeverity = 'Severe';
-        else if (alertType === 'watch')     capSeverity = 'Moderate';
-        else if (alertType === 'advisory')  capSeverity = 'Minor';
-        else if (alertType === 'statement') capSeverity = '';
+        if (riskColour === 'red')          capSeverity = 'Extreme';
+        else if (riskColour === 'orange')  capSeverity = 'Severe';
+        else if (riskColour === 'yellow')  capSeverity = 'Moderate';
+        else {
+          // Fallback: infer from alert_type when risk_colour_en is absent
+          if (alertType === 'warning')        capSeverity = 'Severe';
+          else if (alertType === 'watch')     capSeverity = 'Moderate';
+          else if (alertType === 'advisory')  capSeverity = 'Minor';
+          else if (alertType === 'statement') capSeverity = '';
+        }
+
+        // Build title with EC colour prefix: e.g. "YELLOW WARNING - Cold warning"
+        let displayTitle = alertName ? alertName.charAt(0).toUpperCase() + alertName.slice(1) : 'Weather Alert';
+        if (riskColour && alertType) {
+          const colourWord = riskColour.toUpperCase();
+          const typeWord   = alertType.toUpperCase();
+          // Only prepend if the alert name doesn't already include the colour
+          if (!displayTitle.toLowerCase().includes(riskColour)) {
+            displayTitle = `${colourWord} ${typeWord} — ${displayTitle}`;
+          }
+        }
 
         return {
-          title:       alertName ? alertName.charAt(0).toUpperCase() + alertName.slice(1) : 'Weather Alert',
+          title:       displayTitle,
           summary:     alertText,
           updated:     pubDate,
           link:        'https://weather.gc.ca/warnings/index_e.html',
           capSeverity: capSeverity,
+          area:        featureName || '',
+          province:    province || '',
         };
       })
       .filter(a => a !== null);
@@ -1027,7 +1072,7 @@ function renderHourly(data) {
   let startIdx   = times.findIndex(t => t >= nowStr);
   if (startIdx < 0) startIdx = 0;
 
-  const slice = 48;
+  const slice = 24;
   const hours = [];
   for (let i = startIdx; i < Math.min(startIdx + slice, times.length); i++) {
     const t    = times[i];
@@ -1178,7 +1223,10 @@ function renderAlerts(alerts) {
       return `
         <div class="alert-item ${tier.cls}">
           <div class="alert-header" onclick="this.parentElement.classList.toggle('expanded')">
-            <div class="alert-title">${tier.icon} ${a.title}</div>
+            <div class="alert-title-wrap">
+              <div class="alert-title">${tier.icon} ${a.title}</div>
+              ${a.area ? `<div class="alert-area">${a.area}${a.province ? ', ' + a.province : ''}</div>` : ''}
+            </div>
             ${timeDisplay ? `<div class="alert-time">${timeDisplay}</div>` : ''}
             <span class="alert-chevron">▾</span>
           </div>
@@ -1268,36 +1316,50 @@ function renderAstronomy(data) {
 
   const el = document.getElementById('body-astronomy');
   el.innerHTML = `
-    <div class="astro-row">
-      <span class="astro-label">🌅 SUNRISE</span>
-      <span class="astro-value">${formatTime12(sunrise)}</span>
-    </div>
-    <div class="astro-row">
-      <span class="astro-label">🌇 SUNSET</span>
-      <span class="astro-value">${formatTime12(sunset)}</span>
-    </div>
-    <div class="astro-row">
-      <span class="astro-label">☀️ DAYLIGHT</span>
-      <span class="astro-value">${hh}h ${mm}m</span>
-    </div>
+    <div class="astro-grid">
+      <div class="astro-data">
+        <div class="astro-row">
+          <span class="astro-label">🌅 SUNRISE</span>
+          <span class="astro-value">${formatTime12(sunrise)}</span>
+        </div>
+        <div class="astro-row">
+          <span class="astro-label">🌇 SUNSET</span>
+          <span class="astro-value">${formatTime12(sunset)}</span>
+        </div>
+        <div class="astro-row">
+          <span class="astro-label">☀️ DAYLIGHT</span>
+          <span class="astro-value">${hh}h ${mm}m</span>
+        </div>
 
-    <div class="daylight-bar-wrap">
-      <div class="daylight-bar-label">
-        <span>${formatTime12(sunrise)}</span>
-        <span>${formatTime12(sunset)}</span>
-      </div>
-      <div class="daylight-bar">
-        <div class="daylight-fill" style="width:${pct.toFixed(1)}%"></div>
-      </div>
-    </div>
+        <div class="daylight-bar-wrap">
+          <div class="daylight-bar-label">
+            <span>${formatTime12(sunrise)}</span>
+            <span>${formatTime12(sunset)}</span>
+          </div>
+          <div class="daylight-bar">
+            <div class="daylight-fill" style="width:${pct.toFixed(1)}%"></div>
+          </div>
+        </div>
 
-    <div class="moon-section">
-      <div class="moon-canvas-wrap">
-        <canvas id="moon-canvas" width="64" height="64"></canvas>
+        <div class="moon-section">
+          <div class="moon-canvas-wrap">
+            <canvas id="moon-canvas" width="64" height="64"></canvas>
+          </div>
+          <div class="moon-info">
+            <div class="moon-phase-name">${moon.emoji} ${moon.name.toUpperCase()}</div>
+            <div class="moon-illumination">ILLUMINATION: ${Math.round(moon.illumination * 100)}%</div>
+          </div>
+        </div>
       </div>
-      <div class="moon-info">
-        <div class="moon-phase-name">${moon.emoji} ${moon.name.toUpperCase()}</div>
-        <div class="moon-illumination">ILLUMINATION: ${Math.round(moon.illumination * 100)}%</div>
+
+      <div class="astro-image-section">
+        <div class="astro-image-label">AURORA FORECAST</div>
+        <img class="astro-image" src="https://services.swpc.noaa.gov/experimental/images/aurora_dashboard/tonights_static_viewline_forecast.png?t=${Date.now()}" alt="Aurora Forecast">
+      </div>
+
+      <div class="astro-image-section">
+        <div class="astro-image-label">SOLAR ACTIVITY — SUVI 171</div>
+        <img class="astro-image" src="https://services.swpc.noaa.gov/images/animations/suvi/primary/171/latest.png?t=${Date.now()}" alt="Solar SUVI 171">
       </div>
     </div>
   `;
@@ -1471,6 +1533,7 @@ async function refreshAll() {
   });
 
   updateLastUpdated();
+  refreshSatellite();
   setRefreshButtonState(false);
   STATE.isRefreshing = false;
 }
@@ -1526,10 +1589,41 @@ function resizeHourlyChart() {
   }
 }
 
+function switchSatelliteTab(btn) {
+  const tabs = document.querySelectorAll('#satellite-tabs .tab-btn');
+  tabs.forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const img = document.getElementById('satellite-img');
+  if (img) {
+    img.src = btn.dataset.src + '?t=' + Date.now();
+  }
+}
+
+function initSatellite() {
+  const activeTab = document.querySelector('#satellite-tabs .tab-btn.active');
+  if (activeTab) {
+    const img = document.getElementById('satellite-img');
+    if (img) {
+      img.src = activeTab.dataset.src + '?t=' + Date.now();
+    }
+  }
+}
+
+function refreshSatellite() {
+  const activeTab = document.querySelector('#satellite-tabs .tab-btn.active');
+  if (activeTab) {
+    const img = document.getElementById('satellite-img');
+    if (img) {
+      img.src = activeTab.dataset.src + '?t=' + Date.now();
+    }
+  }
+}
+
 function init() {
   initClockTick();
   initWindy();
   initModels();
+  initSatellite();
   initSearch();
 
   // Try to load saved location

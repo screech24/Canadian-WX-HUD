@@ -3,7 +3,7 @@
    Caches app shell for offline PWA support
    ============================================================ */
 
-const CACHE_NAME = 'wxhud-v2.0.0';
+const CACHE_NAME = 'wxhud-v2.2.0';
 const APP_SHELL = [
   './',
   './index.html',

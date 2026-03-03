@@ -1,4 +1,4 @@
-# CANADIAN WX HUD — v2.0.0
+# CANADIAN WX HUD — v2.2.0
 
 A cyberpunk-themed live weather monitoring dashboard for any Canadian location.
 Pure HTML/CSS/JS — no build tools, no API keys, no dependencies.
@@ -14,18 +14,19 @@ Installable as a PWA on mobile. Hostable on GitHub Pages.
 - Last-used location **persisted to localStorage** — remembered on reload
 - All panels update dynamically when location changes
 
-### 8 Live Panels
+### 9 Live Panels
 
 | Panel | Description |
 |-------|-------------|
 | **Current Conditions** | Temp, feels-like, humidity, dew point, pressure, visibility, cloud cover, UV index, animated SVG wind compass |
-| **Hourly Forecast** | Bezier-curve canvas chart + scrollable 48-hour cards with snow (cm) or rain (mm) amounts |
+| **Hourly Forecast** | Bezier-curve canvas chart with legend + scrollable 24-hour cards with snow (cm) or rain (mm) amounts |
 | **7-Day Forecast** | Daily high/low, WMO condition icon, precipitation amounts, wind |
 | **Live Radar / Wind Map** | Windy.com embed centered on selected location — switchable: Radar / Lightning / Wind |
-| **Weather Models** | Tropical Tidbits GFS viewer link with PRECIP / TEMP / SNOW tab switcher |
-| **EC Alerts** | Environment Canada alerts via GeoMet WFS — point-in-polygon filtered, expandable cards |
+| **Weather Models** | Tropical Tidbits GFS viewer link with PRECIP / TEMP (2m anomaly) / SNOW tab switcher |
+| **EC Alerts** | Environment Canada alerts via GeoMet WFS — point-in-polygon filtered, expandable cards with `risk_colour_en` color mapping and location display |
 | **Air Quality** | US AQI canvas semicircle gauge + PM2.5, PM10, O3, CO, NO2 bars |
-| **Astronomy** | Sunrise/sunset, daylight progress bar, canvas moon phase with illumination % |
+| **Astronomy** | Sunrise/sunset, daylight progress bar, canvas moon phase with illumination %, aurora forecast, solar SUVI 171 imagery |
+| **Satellite** | GOES-19 satellite imagery with GL GeoColor, GL IR (Band 13), and Full Disk GeoColor tabs |
 
 ### Design
 - Cyberpunk dark theme — neon cyan/magenta/purple glows, scanline overlay
@@ -95,6 +96,8 @@ Weather App 2.0/
 | [Windy.com](https://windy.com) | Radar / lightning / wind map embed | Free embed |
 | [Blitzortung.org](https://www.blitzortung.org) | Lightning strike data (via Windy overlay) | Free, community |
 | [Tropical Tidbits](https://www.tropicaltidbits.com) | GFS model viewer (external link) | Free |
+| [NOAA SWPC](https://www.swpc.noaa.gov) | Aurora forecast, solar SUVI 171 imagery | Free, public |
+| [NOAA GOES-19 / NESDIS](https://www.star.nesdis.noaa.gov) | GOES-19 satellite imagery (GeoColor, IR) | Free, public |
 | [Nominatim / OSM](https://nominatim.openstreetmap.org) | Reverse geocoding for geolocation | Free |
 | [Google Fonts](https://fonts.google.com) | Orbitron, Share Tech Mono | Free CDN |
 
@@ -121,7 +124,8 @@ Fetches active alerts from **Environment Canada's GeoMet WFS** service (`geo.wea
 - Queries `ec-msc:Current-Alerts` layer with a BBOX around the user's location
 - **Point-in-polygon filtering** ensures only alerts whose geographic boundary covers the exact location are shown
 - No CORS proxy needed — GeoMet has `Access-Control-Allow-Origin: *`
-- Alert severity mapped to EC's colour system (Grey / Yellow / Orange / Red)
+- Alert colours sourced from EC's `risk_colour_en` field (Yellow / Orange / Red) with `alert_type` keyword fallback
+- Alert location displayed using `feature_name_en` and `province` fields
 - Expandable alert cards — title always visible, click to expand full details
 
 ---
